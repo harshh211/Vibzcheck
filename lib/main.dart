@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart' as app_auth;
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'providers/session_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,9 +30,10 @@ class VibzcheckApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
-      ],
+  providers: [
+    ChangeNotifierProvider(create: (_) => app_auth.AuthProvider()),
+    ChangeNotifierProvider(create: (_) => SessionProvider()),
+  ],
       child: MaterialApp(
         title: 'Vibzcheck',
         debugShowCheckedModeBanner: false,
