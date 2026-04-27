@@ -8,7 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/spotify_service.dart';
 import '../../widgets/track_tile.dart';
-
+import '../../services/firestore_service.dart';
+import '../../services/messaging_service.dart';
 /// SearchTracksScreen lets a session member search Spotify and tap a
 /// result to add it to the session's queue. Search is debounced so we
 /// don't hit Spotify's rate limit while the user is still typing.
@@ -85,13 +86,13 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
   }
 
   Future<void> _addTrack(Track track) async {
-    final userId = context.read<AuthProvider>().currentUser?.uid;
-    if (userId == null) return;
+    final user = context.read<AuthProvider>().currentUser;
+    if (user == null) return;
 
     final success = await context.read<SessionProvider>().addTrack(
           sessionId: widget.sessionId,
           track: track,
-          addedBy: userId,
+          addedBy: user.uid,
         );
 
     if (!mounted) return;
@@ -104,10 +105,38 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
           duration: const Duration(seconds: 1),
         ),
       );
+
+      // Notify other members of the session. Fire-and-forget: don't make
+      // the user wait for FCM, and don't surface failures — push is
+      // best-effort. The Firestore listener has already updated everyone's
+      // queue UI in real time; the notification is just a nicety for
+      // members who have the app backgrounded.
+      _notifyMembers(track, user.displayName ?? 'Someone');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not add track')),
       );
+    }
+  }
+
+  Future<void> _notifyMembers(Track track, String adderName) async {
+    // Capture the current user's UID synchronously, BEFORE any await.
+    // This avoids touching `context` after async gaps (widget could
+    // have been disposed by then).
+    final excludeUid = context.read<AuthProvider>().currentUser?.uid;
+
+    try {
+      final memberIds = await FirestoreService()
+          .getSessionMemberIds(widget.sessionId);
+      await MessagingService().sendToUsers(
+        userIds: memberIds,
+        excludeUid: excludeUid,
+        title: 'New track in your session',
+        body: '$adderName added "${track.title}" by ${track.artist}',
+        data: {'sessionId': widget.sessionId, 'type': 'track_added'},
+      );
+    } catch (_) {
+      // Silent — push is best-effort.
     }
   }
 
