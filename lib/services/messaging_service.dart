@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:googleapis_auth/auth_io.dart';
-import 'package:http/http.dart' as http;
+
 
 /// MessagingService handles three things:
 ///   1. Permission + token registration on first launch

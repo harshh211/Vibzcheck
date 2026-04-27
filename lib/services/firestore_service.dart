@@ -135,7 +135,12 @@ class FirestoreService {
   Stream<Session> streamSession(String sessionId) {
     return _sessions.doc(sessionId).snapshots().map(Session.fromFirestore);
   }
-
+  Future<List<String>> getSessionMemberIds(String sessionId) async {
+    final snap = await _sessions.doc(sessionId).get();
+    if (!snap.exists) return [];
+    final data = snap.data() ?? {};
+    return List<String>.from(data['memberIds'] as List? ?? []);
+  }
   /// Fetch the profiles for a list of member UIDs. Used to render names
   /// and avatars. Firestore 'in' queries cap at 30 values; we chunk to
   /// handle larger sessions (not expected, but safe).
