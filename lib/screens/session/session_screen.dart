@@ -4,18 +4,21 @@ import 'package:provider/provider.dart';
 
 import '../../models/app_user.dart';
 import '../../models/session.dart';
+import '../../models/track.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/firestore_service.dart';
+import '../../widgets/track_tile.dart';
+import 'search_tracks_screen.dart';
 
-/// SessionScreen is the room the user is in. For Stage 3 it shows:
+/// SessionScreen is the room the user is in. As of Stage 4 it shows:
 ///   - Session name + shareable join code
 ///   - Live-streaming member list (updates as people join/leave)
+///   - Live-streaming track queue (updates as tracks are added/removed/voted)
+///   - FAB to open the Spotify search screen
 ///   - Leave button (becomes "Close session" if you're the host)
 ///
-/// Stage 4 will add the track queue. Stage 5 adds voting. Stage 6 adds chat.
-/// Keeping this screen thin now makes those additions easier — each
-/// becomes a tab or a section rather than a rewrite.
+/// Stage 5 will add voting controls. Stage 6 adds chat.
 class SessionScreen extends StatelessWidget {
   final String sessionId;
   const SessionScreen({super.key, required this.sessionId});
@@ -65,33 +68,36 @@ class SessionScreen extends StatelessWidget {
             children: [
               _JoinCodeCard(joinCode: session.joinCode),
               const SizedBox(height: 24),
-              Text(
+              _SectionHeader(
                 'Members · ${session.memberIds.length}',
-                style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
               _MembersList(
                 memberIds: session.memberIds,
                 hostId: session.hostId,
               ),
-              const SizedBox(height: 32),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.queue_music, size: 48),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Track queue coming in the next build',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
+              const SizedBox(height: 24),
+              const _SectionHeader('Queue'),
+              const SizedBox(height: 8),
+              _QueueList(
+                sessionId: sessionId,
+                currentUserId: userId,
+                hostId: session.hostId,
               ),
+              // Bottom padding so the FAB doesn't overlap the last item.
+              const SizedBox(height: 80),
             ],
+          ),
+          floatingActionButton: FloatingActionButton.extended(
+            icon: const Icon(Icons.add),
+            label: const Text('Add tracks'),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SearchTracksScreen(sessionId: sessionId),
+                ),
+              );
+            },
           ),
         );
       },
@@ -138,6 +144,19 @@ class SessionScreen extends StatelessWidget {
 
 // -------------------------------------------------------------------------
 
+class _SectionHeader extends StatelessWidget {
+  final String text;
+  const _SectionHeader(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium,
+    );
+  }
+}
+
 class _JoinCodeCard extends StatelessWidget {
   final String joinCode;
   const _JoinCodeCard({required this.joinCode});
@@ -182,9 +201,6 @@ class _JoinCodeCard extends StatelessWidget {
   }
 }
 
-/// Fetches member profiles in one batch query. We rebuild this whenever
-/// the parent stream delivers a new memberIds list — not every rebuild,
-/// since FutureBuilder keys off its `future` parameter.
 class _MembersList extends StatelessWidget {
   final List<String> memberIds;
   final String hostId;
@@ -193,7 +209,6 @@ class _MembersList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Sorted so the UI is stable across rebuilds.
     final sortedIds = List<String>.from(memberIds)..sort();
 
     return FutureBuilder<List<AppUser>>(
@@ -210,7 +225,6 @@ class _MembersList extends StatelessWidget {
           return const Text('No members yet.');
         }
 
-        // Host appears first.
         users.sort((a, b) {
           if (a.uid == hostId) return -1;
           if (b.uid == hostId) return 1;
@@ -238,6 +252,82 @@ class _MembersList extends StatelessWidget {
                       )
                     : null,
               ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+/// Live queue list. Streams the tracks subcollection in real time so any
+/// member adding/removing a track shows up here without refresh.
+class _QueueList extends StatelessWidget {
+  final String sessionId;
+  final String currentUserId;
+  final String hostId;
+
+  const _QueueList({
+    required this.sessionId,
+    required this.currentUserId,
+    required this.hostId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.read<SessionProvider>();
+
+    return StreamBuilder<List<Track>>(
+      stream: provider.streamTracks(sessionId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text('Could not load queue.'),
+          );
+        }
+        final tracks = snapshot.data ?? [];
+        if (tracks.isEmpty) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Icon(Icons.queue_music, size: 48),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No tracks yet — tap "Add tracks" to start the vibe.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: tracks.map((track) {
+            final canRemove = track.addedBy == currentUserId ||
+                hostId == currentUserId;
+            return TrackTile(
+              track: track,
+              trailing: canRemove
+                  ? IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      tooltip: 'Remove',
+                      onPressed: () => provider.removeTrack(
+                        sessionId: sessionId,
+                        trackId: track.id,
+                      ),
+                    )
+                  : null,
             );
           }).toList(),
         );
