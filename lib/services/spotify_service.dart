@@ -49,7 +49,6 @@ class SpotifyService {
 
     // Spotify expects Basic auth with base64(client_id:client_secret).
     final basic = base64Encode(utf8.encode('$clientId:$clientSecret'));
-
     final response = await http.post(
       Uri.parse(_tokenUrl),
       headers: {
@@ -58,7 +57,6 @@ class SpotifyService {
       },
       body: {'grant_type': 'client_credentials'},
     );
-
     if (response.statusCode != 200) {
       throw Exception(
         'Spotify auth failed (${response.statusCode}): ${response.body}',
@@ -77,7 +75,7 @@ class SpotifyService {
   ///
   /// We construct lightweight Track objects here — voting state defaults
   /// to empty since these are search results, not queue entries yet.
-  Future<List<Track>> searchTracks(String query, {int limit = 20}) async {
+  Future<List<Track>> searchTracks(String query, {int limit = 10}) async {
     final trimmed = query.trim();
     if (trimmed.isEmpty) return [];
 
@@ -87,12 +85,10 @@ class SpotifyService {
       'type': 'track',
       'limit': '$limit',
     });
-
     final response = await http.get(
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
-
     if (response.statusCode != 200) {
       throw Exception(
         'Spotify search failed (${response.statusCode}): ${response.body}',
