@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/track_tile.dart';
+import '../../widgets/vote_buttons.dart';
 import 'search_tracks_screen.dart';
 
 /// SessionScreen is the room the user is in. As of Stage 4 it shows:
@@ -318,6 +319,31 @@ class _QueueList extends StatelessWidget {
                 hostId == currentUserId;
             return TrackTile(
               track: track,
+              leading: VoteButtons(
+                track: track,
+                currentUserId: currentUserId,
+                onUpTap: () {
+                  // Toggle: if already upvoted, clear; otherwise upvote.
+                  final newDirection = track.isUpvotedBy(currentUserId) ? 0 : 1;
+                  provider.voteOnTrack(
+                    sessionId: sessionId,
+                    trackId: track.id,
+                    userId: currentUserId,
+                    direction: newDirection,
+                  );
+                },
+                onDownTap: () {
+                  // Toggle: if already downvoted, clear; otherwise downvote.
+                  final newDirection =
+                      track.isDownvotedBy(currentUserId) ? 0 : -1;
+                  provider.voteOnTrack(
+                    sessionId: sessionId,
+                    trackId: track.id,
+                    userId: currentUserId,
+                    direction: newDirection,
+                  );
+                },
+              ),
               trailing: canRemove
                   ? IconButton(
                       icon: const Icon(Icons.remove_circle_outline),
