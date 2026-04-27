@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/app_user.dart';
 import '../models/session.dart';
+import '../models/track.dart';
 
 /// FirestoreService centralizes every Firestore read and write for
 /// sessions, users, tracks, votes, and messages. Screens and providers
@@ -149,7 +150,50 @@ class FirestoreService {
     }
     return users;
   }
+  // ---- Tracks (session subcollection) ----------------------------------
 
+  /// Reference to a session's tracks subcollection.
+  CollectionReference<Map<String, dynamic>> _tracks(String sessionId) =>
+      _sessions.doc(sessionId).collection('tracks');
+
+  /// Add a track to a session's queue. The track is keyed by Firestore's
+  /// auto-id, not by spotifyId — the same Spotify track CAN appear twice
+  /// in a queue if added by different users (a feature, not a bug; lets
+  /// people re-up a banger that already played).
+  Future<void> addTrack({
+    required String sessionId,
+    required Track track,
+    required String addedBy,
+  }) async {
+    // Build a fresh map so we don't accidentally inherit voting state
+    // from a search-result Track. toCreateMap() resets vote counts to 0.
+    final data = track.toCreateMap();
+    data['addedBy'] = addedBy;
+
+    await _tracks(sessionId).add(data);
+  }
+
+  /// Real-time stream of tracks in a session's queue, ordered by vote
+  /// score (highest first), then by add time (oldest first as tiebreaker).
+  ///
+  /// Requires a composite index on (voteScore desc, addedAt asc).
+  /// Firestore will prompt to create it on first run.
+  Stream<List<Track>> streamTracks(String sessionId) {
+    return _tracks(sessionId)
+        .orderBy('voteScore', descending: true)
+        .orderBy('addedAt', descending: false)
+        .snapshots()
+        .map((snap) => snap.docs.map(Track.fromFirestore).toList());
+  }
+
+  /// Remove a track from the queue. Security rules enforce that only the
+  /// adder or the session host can delete.
+  Future<void> removeTrack({
+    required String sessionId,
+    required String trackId,
+  }) async {
+    await _tracks(sessionId).doc(trackId).delete();
+  }
   // ---- Helpers ----------------------------------------------------------
 
   /// Generate a 6-character join code using letters + digits, excluding
