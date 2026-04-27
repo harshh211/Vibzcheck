@@ -120,6 +120,27 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+  /// Vote on a track. Direction: +1 up, -1 down, 0 clears the vote.
+  /// Failures are silent — the real-time listener will reflect the true
+  /// state on the next tick if anything went wrong.
+  Future<void> voteOnTrack({
+    required String sessionId,
+    required String trackId,
+    required String userId,
+    required int direction,
+  }) async {
+    try {
+      await _firestore.voteOnTrack(
+        sessionId: sessionId,
+        trackId: trackId,
+        userId: userId,
+        direction: direction,
+      );
+    } catch (_) {
+      _errorMessage = 'Could not register vote.';
+      notifyListeners();
+    }
+  }
   void clearError() {
     _errorMessage = null;
     notifyListeners();
