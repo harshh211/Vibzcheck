@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/session.dart';
+import '../models/track.dart';
 import '../services/firestore_service.dart';
 
 /// SessionProvider wraps FirestoreService calls with loading/error state
@@ -79,7 +80,46 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+  // ---- Tracks ----------------------------------------------------------
 
+  /// Real-time stream of the queue for a session.
+  Stream<List<Track>> streamTracks(String sessionId) =>
+      _firestore.streamTracks(sessionId);
+
+  /// Add a track to the queue. Returns true on success, false on failure
+  /// (errorMessage is set). UI can show a snackbar on false.
+  Future<bool> addTrack({
+    required String sessionId,
+    required Track track,
+    required String addedBy,
+  }) async {
+    try {
+      await _firestore.addTrack(
+        sessionId: sessionId,
+        track: track,
+        addedBy: addedBy,
+      );
+      return true;
+    } catch (_) {
+      _errorMessage = 'Could not add track. Try again.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Remove a track from the queue. Silent failure path — UI can refresh
+  /// stream to verify; we don't surface every Firestore error to users.
+  Future<void> removeTrack({
+    required String sessionId,
+    required String trackId,
+  }) async {
+    try {
+      await _firestore.removeTrack(sessionId: sessionId, trackId: trackId);
+    } catch (_) {
+      _errorMessage = 'Could not remove track.';
+      notifyListeners();
+    }
+  }
   void clearError() {
     _errorMessage = null;
     notifyListeners();
