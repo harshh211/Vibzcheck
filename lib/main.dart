@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'providers/auth_provider.dart' as app_auth;
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/home/home_screen.dart';
+import 'services/messaging_service.dart';
 import 'providers/session_provider.dart';
 
 void main() async {
@@ -54,8 +55,34 @@ class VibzcheckApp extends StatelessWidget {
 /// - Signed in  -> HomeScreen
 /// - Signed out -> SignInScreen
 /// This is a single source of truth: no screen ever manually checks auth state.
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  final MessagingService _messaging = MessagingService();
+  String? _initializedForUid;
+
+  Future<void> _initMessagingIfNeeded(User? user) async {
+    if (user == null) {
+      _initializedForUid = null;
+      return;
+    }
+    // Skip if we've already initialized for this user (auth stream can
+    // emit the same user multiple times across rebuilds).
+    if (_initializedForUid == user.uid) return;
+    _initializedForUid = user.uid;
+    try {
+      await _messaging.initialize();
+    } catch (e) {
+      // Don't block the UI on FCM failures. Notifications are best-effort.
+      // ignore: avoid_print
+      print('[MessagingService] initialize failed: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,6 +94,10 @@ class AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
+        // Trigger messaging init for the freshly signed-in user. We don't
+        // await — UI shouldn't block on permission prompts or token network.
+        _initMessagingIfNeeded(snapshot.data);
+
         if (snapshot.hasData) {
           return const HomeScreen();
         }
