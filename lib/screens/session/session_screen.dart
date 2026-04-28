@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/app_user.dart';
 import '../../models/session.dart';
@@ -235,16 +236,26 @@ class _MembersList extends StatelessWidget {
         return Column(
           children: users.map((user) {
             final isHost = user.uid == hostId;
+            final avatar = (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
+                // CachedNetworkImageProvider so avatars don't redownload
+                // on every queue update — the real-time listener can fire
+                // dozens of times per minute and we don't want to thrash.
+                ? CircleAvatar(
+                    backgroundImage:
+                        CachedNetworkImageProvider(user.avatarUrl!),
+                  )
+                : CircleAvatar(
+                    child: Text(
+                      user.displayName.isEmpty
+                          ? '?'
+                          : user.displayName[0].toUpperCase(),
+                    ),
+                  );
+
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: CircleAvatar(
-                  child: Text(
-                    user.displayName.isEmpty
-                        ? '?'
-                        : user.displayName[0].toUpperCase(),
-                  ),
-                ),
+                leading: avatar,
                 title: Text(user.displayName),
                 trailing: isHost
                     ? const Chip(
