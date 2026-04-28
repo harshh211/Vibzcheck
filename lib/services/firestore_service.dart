@@ -41,6 +41,14 @@ class FirestoreService {
           (snap) => snap.exists ? AppUser.fromFirestore(snap) : null,
         );
   }
+  Future<void> updateAvatarUrl({
+    required String userId,
+    required String? avatarUrl,
+  }) async {
+    await _users.doc(userId).update({
+      'avatarUrl': avatarUrl,
+    });
+  }
 
   // ---- Sessions ---------------------------------------------------------
 
