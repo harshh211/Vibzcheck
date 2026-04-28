@@ -235,6 +235,23 @@ class FirestoreService {
     if (direction != -1 && direction != 0 && direction != 1) {
       throw ArgumentError('direction must be -1, 0, or 1');
     }
+    Future<void> toggleMoodTag({
+    required String sessionId,
+    required String trackId,
+    required String tag,
+    required bool currentlyApplied,
+  }) async {
+    final ref = _tracks(sessionId).doc(trackId);
+    if (currentlyApplied) {
+      await ref.update({
+        'moodTags': FieldValue.arrayRemove([tag]),
+      });
+    } else {
+      await ref.update({
+        'moodTags': FieldValue.arrayUnion([tag]),
+      });
+    }
+  }
 
     final ref = _tracks(sessionId).doc(trackId);
 
