@@ -84,7 +84,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _SectionHeader('Notifications'),
+                const _SectionHeader('Notifications'),
                 SwitchListTile(
                   title: const Text('Push notifications'),
                   subtitle: const Text(
@@ -97,7 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 const Divider(),
-                _SectionHeader('Recommendations'),
+                const _SectionHeader('Recommendations'),
                 _AboutRecommendationsBlurb(),
 
                 _SliderTile(
@@ -129,7 +129,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
 
                 const Divider(),
-                _SectionHeader('About'),
+                const _SectionHeader('About'),
                 const ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('Vibzcheck'),
