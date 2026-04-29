@@ -1,6 +1,5 @@
 import '../models/track.dart';
 
-
 class Recommendation {
   final Track track;
   final int score;
@@ -14,10 +13,9 @@ class Recommendation {
 }
 
 class RecommendationEngine {
-  // Tunable weights as named constants so it's trivial to explain
-  // "we weight popularity higher than mood overlap" in the demo.
   static const int _popularityWeight = 10;
   static const int _moodMatchWeight = 8;
+  static const int _audioFeatureWeight = 6;
   static const int _alreadyUpvotedPenalty = 25;
   static const int _alreadyDownvotedPenalty = 100;
   static const int _untaggedSmallBoost = 2;
@@ -31,20 +29,20 @@ class RecommendationEngine {
   }) {
     if (tracks.isEmpty) return const [];
 
-    // Compute the "session mood" — most common tags on upvoted tracks.
     final sessionMood = _computeSessionMood(tracks);
+    final sessionAudio = _computeSessionAudioProfile(tracks);
 
     final scored = tracks.map((track) {
       final contributions = _scoreTrack(
         track: track,
         currentUserId: currentUserId,
         sessionMood: sessionMood,
+        sessionAudio: sessionAudio,
       );
 
       final totalScore =
           contributions.fold<int>(0, (sum, c) => sum + c.score);
 
-      // Headline reason = rule with largest absolute contribution.
       contributions.sort((a, b) => b.score.abs().compareTo(a.score.abs()));
       final headlineReason =
           contributions.isEmpty ? 'Default' : contributions.first.label;
@@ -56,8 +54,6 @@ class RecommendationEngine {
       );
     }).toList();
 
-    // Sort by score desc, with original queue index as tiebreaker for
-    // deterministic output.
     final indexed = scored.asMap().entries.toList();
     indexed.sort((a, b) {
       final scoreCompare = b.value.score.compareTo(a.value.score);
@@ -74,21 +70,21 @@ class RecommendationEngine {
     required Track track,
     required String currentUserId,
     required Map<String, int> sessionMood,
+    required _AudioProfile? sessionAudio,
   }) {
     final out = <_Contribution>[];
 
-    // RULE 1: Popularity. Net votes drive the base score.
+    // RULE 1: Popularity.
     if (track.voteScore != 0) {
-      final pts = track.voteScore * _popularityWeight;
       out.add(_Contribution(
-        score: pts,
+        score: track.voteScore * _popularityWeight,
         label: track.voteScore > 0
             ? 'Highly upvoted by the group'
             : 'Group voted this down',
       ));
     }
 
-    // RULE 2: Mood match. Tags overlapping the session mood get a boost.
+    // RULE 2: Mood tag match.
     final matchingTagCount =
         track.moodTags.where((tag) => sessionMood.containsKey(tag)).length;
     if (matchingTagCount > 0) {
@@ -98,8 +94,35 @@ class RecommendationEngine {
       ));
     }
 
-    // RULE 3: User already voted on this track. Penalize so we don't
-    // recommend tracks the user has already weighed in on.
+    // RULE 3: Audio feature similarity to session profile.
+    // Only applied when both the track and the session have audio data.
+    if (sessionAudio != null &&
+        track.energy != null &&
+        track.tempo != null &&
+        track.danceability != null) {
+      final energyDiff = (track.energy! - sessionAudio.avgEnergy).abs();
+      final danceDiff =
+          (track.danceability! - sessionAudio.avgDanceability).abs();
+      // Tempo is 60-200 BPM — normalise to 0-1 range before comparing.
+      final tempoDiff =
+          ((track.tempo! - sessionAudio.avgTempo) / 140.0).abs().clamp(0.0, 1.0);
+
+      // Sum of diffs: 0 = perfect match, 3 = complete mismatch.
+      final totalDiff = energyDiff + danceDiff + tempoDiff;
+
+      // Convert to a 0–3 similarity score (3 = perfect match).
+      final similarity = (3.0 - totalDiff).clamp(0.0, 3.0);
+      final pts = (similarity * _audioFeatureWeight).round();
+
+      if (pts > 0) {
+        out.add(_Contribution(
+          score: pts,
+          label: 'Fits the session vibe',
+        ));
+      }
+    }
+
+    // RULE 4: User already voted.
     if (track.isUpvotedBy(currentUserId)) {
       out.add(const _Contribution(
         score: -_alreadyUpvotedPenalty,
@@ -113,8 +136,7 @@ class RecommendationEngine {
       ));
     }
 
-    // RULE 4: Fresh tracks (no votes, no tags) get a tiny boost so
-    // brand-new additions can still surface in suggestions.
+    // RULE 5: Fresh track boost.
     if (track.voteScore == 0 &&
         track.moodTags.isEmpty &&
         !track.isUpvotedBy(currentUserId) &&
@@ -126,6 +148,31 @@ class RecommendationEngine {
     }
 
     return out;
+  }
+
+  /// Average audio features across upvoted tracks that have feature data.
+  static _AudioProfile? _computeSessionAudioProfile(List<Track> tracks) {
+    final upvoted = tracks.where((t) =>
+        t.voteScore > 0 &&
+        t.energy != null &&
+        t.tempo != null &&
+        t.danceability != null).toList();
+
+    if (upvoted.isEmpty) return null;
+
+    final avgEnergy =
+        upvoted.map((t) => t.energy!).reduce((a, b) => a + b) / upvoted.length;
+    final avgTempo =
+        upvoted.map((t) => t.tempo!).reduce((a, b) => a + b) / upvoted.length;
+    final avgDanceability =
+        upvoted.map((t) => t.danceability!).reduce((a, b) => a + b) /
+            upvoted.length;
+
+    return _AudioProfile(
+      avgEnergy: avgEnergy,
+      avgTempo: avgTempo,
+      avgDanceability: avgDanceability,
+    );
   }
 
   /// Top 3 mood tags across upvoted tracks.
@@ -143,6 +190,18 @@ class RecommendationEngine {
       ..sort((a, b) => b.value.compareTo(a.value));
     return {for (final e in sorted.take(3)) e.key: e.value};
   }
+}
+
+class _AudioProfile {
+  final double avgEnergy;
+  final double avgTempo;
+  final double avgDanceability;
+
+  const _AudioProfile({
+    required this.avgEnergy,
+    required this.avgTempo,
+    required this.avgDanceability,
+  });
 }
 
 /// Internal: a single rule's contribution to a track's score.
