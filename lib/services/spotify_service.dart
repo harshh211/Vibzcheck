@@ -18,6 +18,8 @@ import '../models/track.dart';
 class SpotifyService {
   static const String _tokenUrl = 'https://accounts.spotify.com/api/token';
   static const String _searchUrl = 'https://api.spotify.com/v1/search';
+  static const String _audioFeaturesUrl = 'https://api.spotify.com/v1/audio-features';
+
 
   // Cached token + expiry. Tokens last ~1 hour, so we refresh on demand.
   String? _accessToken;
@@ -130,4 +132,57 @@ class SpotifyService {
       );
     }).toList();
   }
+  /// Fetch audio features (tempo, energy, danceability) for a single
+  /// Spotify track ID. Returns null if Spotify rejects the request — this
+  /// happens on apps without extended quota (their docs deprecated this
+  /// endpoint for new apps in late 2024).
+  ///
+  /// We never throw on failure: audio features are bonus metadata, and
+  /// the rest of the app should keep working without them. Caller treats
+  /// null as "no features available".
+  Future<AudioFeatures?> getAudioFeatures(String spotifyId) async {
+    if (spotifyId.isEmpty) return null;
+
+    try {
+      final token = await _getToken();
+      final uri = Uri.parse('$_audioFeaturesUrl/$spotifyId');
+      final response = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode != 200) {
+        // 403 = endpoint deprecated for this app. 404 = unknown ID.
+        // Either way: we can't show features for this track. Move on.
+        return null;
+      }
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      return AudioFeatures(
+        tempo: (body['tempo'] as num?)?.toDouble() ?? 0,
+        energy: (body['energy'] as num?)?.toDouble() ?? 0,
+        danceability: (body['danceability'] as num?)?.toDouble() ?? 0,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+
+class AudioFeatures {
+  /// Tempo in BPM. Typically 60-200.
+  final double tempo;
+
+  /// 0.0 (calm) to 1.0 (intense). Mirrors Spotify's "perceived intensity."
+  final double energy;
+
+  /// 0.0 (still) to 1.0 (highly danceable).
+  final double danceability;
+
+  const AudioFeatures({
+    required this.tempo,
+    required this.energy,
+    required this.danceability,
+  });
 }
