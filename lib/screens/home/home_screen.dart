@@ -9,6 +9,7 @@ import '../session/session_screen.dart';
 import 'create_session_screen.dart';
 import 'join_session_sheet.dart';
 import '../profile/profile_screen.dart';
+import '../insights/insights_screen.dart';
 
 /// HomeScreen is the signed-in landing page. It streams the user's active
 /// sessions in real time so newly-created or newly-joined sessions appear
@@ -35,6 +36,15 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Vibzcheck'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.insights),
+            tooltip: 'Insights',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const InsightsScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.account_circle_outlined),
             tooltip: 'Profile',
             onPressed: () {
@@ -45,6 +55,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
+
       body: Column(
         children: [
           // ---- Greeting ----
