@@ -118,6 +118,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _prefs.copyWith(moodWeight: v),
                   ),
                 ),
+                _SliderTile(
+                  label: 'Audio vibe weight',
+                  description:
+                      'How much tempo, energy, and danceability similarity drives the ranking.',
+                  value: _prefs.audioFeatureWeight,
+                  onChanged: (v) => _persist(
+                    _prefs.copyWith(audioFeatureWeight: v),
+                  ),
+                ),
 
                 const Divider(),
                 _SectionHeader('About'),
