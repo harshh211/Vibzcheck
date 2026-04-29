@@ -1,26 +1,28 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../models/app_user.dart';
+import '../../models/mood_tag.dart';
 import '../../models/session.dart';
 import '../../models/track.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../services/firestore_service.dart';
+import '../../services/recommendation_engine.dart';
+import '../../widgets/mood_tag_chip.dart';
 import '../../widgets/track_tile.dart';
 import '../../widgets/vote_buttons.dart';
 import 'search_tracks_screen.dart';
 
-/// SessionScreen is the room the user is in. As of Stage 4 it shows:
+/// SessionScreen is the room the user is in. It shows:
 ///   - Session name + shareable join code
-///   - Live-streaming member list (updates as people join/leave)
-///   - Live-streaming track queue (updates as tracks are added/removed/voted)
+///   - Live-streaming member list (avatars update as users change them)
+///   - Suggestions card (top 3 from RecommendationEngine)
+///   - Live-streaming track queue with vote controls + mood tags
 ///   - FAB to open the Spotify search screen
 ///   - Leave button (becomes "Close session" if you're the host)
-///
-/// Stage 5 will add voting controls. Stage 6 adds chat.
 class SessionScreen extends StatelessWidget {
   final String sessionId;
   const SessionScreen({super.key, required this.sessionId});
@@ -86,7 +88,6 @@ class SessionScreen extends StatelessWidget {
                 currentUserId: userId,
                 hostId: session.hostId,
               ),
-              // Bottom padding so the FAB doesn't overlap the last item.
               const SizedBox(height: 80),
             ],
           ),
@@ -237,9 +238,6 @@ class _MembersList extends StatelessWidget {
           children: users.map((user) {
             final isHost = user.uid == hostId;
             final avatar = (user.avatarUrl != null && user.avatarUrl!.isNotEmpty)
-                // CachedNetworkImageProvider so avatars don't redownload
-                // on every queue update — the real-time listener can fire
-                // dozens of times per minute and we don't want to thrash.
                 ? CircleAvatar(
                     backgroundImage:
                         CachedNetworkImageProvider(user.avatarUrl!),
@@ -273,7 +271,7 @@ class _MembersList extends StatelessWidget {
 }
 
 /// Live queue list. Streams the tracks subcollection in real time so any
-/// member adding/removing a track shows up here without refresh.
+/// member adding/removing/voting on/tagging a track shows up here without refresh.
 class _QueueList extends StatelessWidget {
   final String sessionId;
   final String currentUserId;
@@ -325,50 +323,260 @@ class _QueueList extends StatelessWidget {
         }
 
         return Column(
-          children: tracks.map((track) {
-            final canRemove = track.addedBy == currentUserId ||
-                hostId == currentUserId;
-            return TrackTile(
-              track: track,
-              leading: VoteButtons(
-                track: track,
-                currentUserId: currentUserId,
-                onUpTap: () {
-                  // Toggle: if already upvoted, clear; otherwise upvote.
-                  final newDirection = track.isUpvotedBy(currentUserId) ? 0 : 1;
-                  provider.voteOnTrack(
-                    sessionId: sessionId,
-                    trackId: track.id,
-                    userId: currentUserId,
-                    direction: newDirection,
-                  );
-                },
-                onDownTap: () {
-                  // Toggle: if already downvoted, clear; otherwise downvote.
-                  final newDirection =
-                      track.isDownvotedBy(currentUserId) ? 0 : -1;
-                  provider.voteOnTrack(
-                    sessionId: sessionId,
-                    trackId: track.id,
-                    userId: currentUserId,
-                    direction: newDirection,
-                  );
-                },
-              ),
-              trailing: canRemove
-                  ? IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      tooltip: 'Remove',
-                      onPressed: () => provider.removeTrack(
-                        sessionId: sessionId,
-                        trackId: track.id,
+          children: [
+            // ---- Suggestions card (top 3 recommendations) ----
+            _SuggestionsCard(
+              tracks: tracks,
+              currentUserId: currentUserId,
+            ),
+
+            // ---- Queue ----
+            ...tracks.map((track) {
+              final canRemove = track.addedBy == currentUserId ||
+                  hostId == currentUserId;
+              return Column(
+                children: [
+                  TrackTile(
+                    track: track,
+                    onTap: () => _showTagPicker(
+                      context,
+                      sessionId: sessionId,
+                      track: track,
+                    ),
+                    leading: VoteButtons(
+                      track: track,
+                      currentUserId: currentUserId,
+                      onUpTap: () {
+                        final newDirection =
+                            track.isUpvotedBy(currentUserId) ? 0 : 1;
+                        provider.voteOnTrack(
+                          sessionId: sessionId,
+                          trackId: track.id,
+                          userId: currentUserId,
+                          direction: newDirection,
+                        );
+                      },
+                      onDownTap: () {
+                        final newDirection =
+                            track.isDownvotedBy(currentUserId) ? 0 : -1;
+                        provider.voteOnTrack(
+                          sessionId: sessionId,
+                          trackId: track.id,
+                          userId: currentUserId,
+                          direction: newDirection,
+                        );
+                      },
+                    ),
+                    trailing: canRemove
+                        ? IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            tooltip: 'Remove',
+                            onPressed: () => provider.removeTrack(
+                              sessionId: sessionId,
+                              trackId: track.id,
+                            ),
+                          )
+                        : null,
+                  ),
+                  // Show applied tags as a horizontal row beneath the track
+                  if (track.moodTags.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
+                      child: Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: track.moodTags
+                            .map((label) => MoodTag.lookup(label))
+                            .where((tag) => tag != null)
+                            .cast<MoodTag>()
+                            .map((tag) => MoodTagChip(tag: tag))
+                            .toList(),
                       ),
-                    )
-                  : null,
-            );
-          }).toList(),
+                    ),
+                ],
+              );
+            }),
+          ],
         );
       },
+    );
+  }
+
+  /// Modal bottom sheet that lets any session member toggle mood tags
+  /// on a track. Tags are session-wide (anyone can tag), so we read the
+  /// current state from the track itself and let the user toggle from
+  /// there. Real-time listener will reflect changes immediately.
+  Future<void> _showTagPicker(
+    BuildContext context, {
+    required String sessionId,
+    required Track track,
+  }) async {
+    await showModalBottomSheet(
+      context: context,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            // Local copy for instant UI feedback while Firestore write runs.
+            final localTags = Set<String>.from(track.moodTags);
+
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tag this track',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Tags shape the session\'s mood for recommendations.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 20),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: MoodTag.all.map((tag) {
+                      final isOn = localTags.contains(tag.label);
+                      return MoodTagChip(
+                        tag: tag,
+                        selected: isOn,
+                        onTap: () {
+                          setSheetState(() {
+                            if (isOn) {
+                              localTags.remove(tag.label);
+                            } else {
+                              localTags.add(tag.label);
+                            }
+                          });
+                          FirestoreService().toggleMoodTag(
+                            sessionId: sessionId,
+                            trackId: track.id,
+                            tag: tag.label,
+                            currentlyApplied: isOn,
+                          );
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+/// Suggestions card showing the top 3 recommended tracks for the current
+/// user. Pure UI — the scoring lives in RecommendationEngine. We hide
+/// the card if there are no meaningful recommendations (all tracks are
+/// already voted by user or queue is too small).
+class _SuggestionsCard extends StatelessWidget {
+  final List<Track> tracks;
+  final String currentUserId;
+
+  const _SuggestionsCard({
+    required this.tracks,
+    required this.currentUserId,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final recs = RecommendationEngine.rank(
+      tracks: tracks,
+      currentUserId: currentUserId,
+      limit: 3,
+    );
+
+    if (recs.isEmpty || recs.every((r) => r.score <= 0)) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Suggested for you',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ...recs.map((rec) => _SuggestionRow(rec: rec)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionRow extends StatelessWidget {
+  final Recommendation rec;
+  const _SuggestionRow({required this.rec});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          // Score pill so users see WHY this ranks where it does.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '${rec.score}',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rec.track.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  rec.reason,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

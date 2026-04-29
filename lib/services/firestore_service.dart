@@ -235,26 +235,8 @@ class FirestoreService {
     if (direction != -1 && direction != 0 && direction != 1) {
       throw ArgumentError('direction must be -1, 0, or 1');
     }
-    Future<void> toggleMoodTag({
-    required String sessionId,
-    required String trackId,
-    required String tag,
-    required bool currentlyApplied,
-  }) async {
-    final ref = _tracks(sessionId).doc(trackId);
-    if (currentlyApplied) {
-      await ref.update({
-        'moodTags': FieldValue.arrayRemove([tag]),
-      });
-    } else {
-      await ref.update({
-        'moodTags': FieldValue.arrayUnion([tag]),
-      });
-    }
-  }
 
     final ref = _tracks(sessionId).doc(trackId);
-
     await _db.runTransaction((tx) async {
       // STEP 1: Read inside the transaction. Firestore guarantees no other
       // writer modifies this doc between read and write.
@@ -293,6 +275,28 @@ class FirestoreService {
         'voteScore': voteScore,
       });
     });
+  }
+  // ---- Mood tagging ----------------------------------------------------
+
+  /// Toggle a mood tag on a track. If the tag is already present, remove it;
+  /// otherwise add it. Uses arrayUnion/arrayRemove which are atomic on
+  /// Firestore — concurrent toggles from multiple users won't lose updates.
+  Future<void> toggleMoodTag({
+    required String sessionId,
+    required String trackId,
+    required String tag,
+    required bool currentlyApplied,
+  }) async {
+    final ref = _tracks(sessionId).doc(trackId);
+    if (currentlyApplied) {
+      await ref.update({
+        'moodTags': FieldValue.arrayRemove([tag]),
+      });
+    } else {
+      await ref.update({
+        'moodTags': FieldValue.arrayUnion([tag]),
+      });
+    }
   }
   // ---- Helpers ----------------------------------------------------------
 

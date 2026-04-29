@@ -101,13 +101,13 @@ class RecommendationEngine {
     // RULE 3: User already voted on this track. Penalize so we don't
     // recommend tracks the user has already weighed in on.
     if (track.isUpvotedBy(currentUserId)) {
-      out.add(_Contribution(
+      out.add(const _Contribution(
         score: -_alreadyUpvotedPenalty,
         label: 'You already upvoted this',
       ));
     }
     if (track.isDownvotedBy(currentUserId)) {
-      out.add(_Contribution(
+      out.add(const _Contribution(
         score: -_alreadyDownvotedPenalty,
         label: 'You downvoted this',
       ));
@@ -119,7 +119,7 @@ class RecommendationEngine {
         track.moodTags.isEmpty &&
         !track.isUpvotedBy(currentUserId) &&
         !track.isDownvotedBy(currentUserId)) {
-      out.add(_Contribution(
+      out.add(const _Contribution(
         score: _untaggedSmallBoost,
         label: 'Fresh addition to the queue',
       ));
