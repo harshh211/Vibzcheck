@@ -5,14 +5,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_user.dart';
 import '../models/session.dart';
 import '../models/track.dart';
+import '../models/message.dart';
 
-/// FirestoreService centralizes every Firestore read and write for
-/// sessions, users, tracks, votes, and messages. Screens and providers
-/// never touch FirebaseFirestore directly — it all goes through here.
-///
-/// This layer is where business rules live: generating join codes,
-/// running vote transactions, enforcing membership checks on the client
-/// before the write (the rules file enforces on the server).
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -297,6 +291,41 @@ class FirestoreService {
         'moodTags': FieldValue.arrayUnion([tag]),
       });
     }
+  }
+  // ---- Messages (session subcollection) --------------------------------
+
+  /// Reference to a session's messages subcollection.
+  CollectionReference<Map<String, dynamic>> _messages(String sessionId) =>
+      _sessions.doc(sessionId).collection('messages');
+
+  /// Send a chat message in a session. Security rules verify the sender
+  /// is a session member and that senderId matches the auth uid.
+  Future<void> sendMessage({
+    required String sessionId,
+    required String senderId,
+    required String text,
+  }) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+
+    final message = Message(
+      id: '',
+      senderId: senderId,
+      text: trimmed,
+    );
+
+    await _messages(sessionId).add(message.toCreateMap());
+  }
+
+  /// Real-time stream of messages, oldest first so the chat reads
+  /// top-to-bottom like every other chat app on the planet.
+  /// We use orderBy('sentAt') with descending: false; the chat screen
+  /// reverses the ListView so newest appears at the bottom anchor.
+  Stream<List<Message>> streamMessages(String sessionId) {
+    return _messages(sessionId)
+        .orderBy('sentAt', descending: false)
+        .snapshots()
+        .map((snap) => snap.docs.map(Message.fromFirestore).toList());
   }
   // ---- Helpers ----------------------------------------------------------
 
