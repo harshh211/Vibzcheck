@@ -6,7 +6,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/insights_service.dart';
 import '../../widgets/mood_tag_chip.dart';
 
-
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
 
@@ -66,6 +65,8 @@ class _InsightsScreenState extends State<InsightsScreen> {
               children: [
                 _StatGrid(result: result),
                 const SizedBox(height: 24),
+                _AudioProfileCard(result: result),
+                const SizedBox(height: 16),
                 _TopMoodsCard(result: result),
                 const SizedBox(height: 16),
                 _TopArtistsCard(result: result),
@@ -79,9 +80,135 @@ class _InsightsScreenState extends State<InsightsScreen> {
   }
 }
 
+// ---- Audio profile card -------------------------------------------------
 
-/// Grid of summary stats: sessions hosted, sessions joined, tracks added,
-/// upvotes given, downvotes given. Two columns on phones.
+class _AudioProfileCard extends StatelessWidget {
+  final InsightsResult result;
+  const _AudioProfileCard({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasData = result.avgTempo != null ||
+        result.avgEnergy != null ||
+        result.avgDanceability != null;
+
+    if (!hasData) {
+      return const _EmptyCard(
+        icon: Icons.graphic_eq,
+        message: 'Add tracks to sessions to see your audio profile here.',
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your audio profile',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Averages across tracks you\'ve added.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 16),
+            if (result.avgTempo != null)
+              _AudioBar(
+                icon: Icons.speed,
+                label: 'Tempo',
+                display: '${result.avgTempo!.round()} BPM',
+                // Normalise 60-200 BPM range to 0-1 for the bar.
+                fraction: ((result.avgTempo! - 60) / 140).clamp(0.0, 1.0),
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+            if (result.avgEnergy != null) ...[
+              const SizedBox(height: 10),
+              _AudioBar(
+                icon: Icons.bolt,
+                label: 'Energy',
+                display: '${(result.avgEnergy! * 100).round()}%',
+                fraction: result.avgEnergy!.clamp(0.0, 1.0),
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ],
+            if (result.avgDanceability != null) ...[
+              const SizedBox(height: 10),
+              _AudioBar(
+                icon: Icons.directions_walk,
+                label: 'Danceability',
+                display: '${(result.avgDanceability! * 100).round()}%',
+                fraction: result.avgDanceability!.clamp(0.0, 1.0),
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AudioBar extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String display;
+  final double fraction;
+  final Color color;
+
+  const _AudioBar({
+    required this.icon,
+    required this.label,
+    required this.display,
+    required this.fraction,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 88,
+          child: Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 8,
+              color: color,
+              backgroundColor: color.withValues(alpha: 0.15),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 56,
+          child: Text(
+            display,
+            textAlign: TextAlign.right,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---- Existing cards (unchanged) -----------------------------------------
+
 class _StatGrid extends StatelessWidget {
   final InsightsResult result;
   const _StatGrid({required this.result});
@@ -89,31 +216,11 @@ class _StatGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      _StatItem(
-        icon: Icons.star,
-        label: 'Hosted',
-        value: result.sessionsHosted,
-      ),
-      _StatItem(
-        icon: Icons.group,
-        label: 'Joined',
-        value: result.sessionsJoined,
-      ),
-      _StatItem(
-        icon: Icons.queue_music,
-        label: 'Tracks added',
-        value: result.totalTracksAdded,
-      ),
-      _StatItem(
-        icon: Icons.thumb_up,
-        label: 'Upvotes given',
-        value: result.upvotesGiven,
-      ),
-      _StatItem(
-        icon: Icons.thumb_down,
-        label: 'Downvotes given',
-        value: result.downvotesGiven,
-      ),
+      _StatItem(icon: Icons.star, label: 'Hosted', value: result.sessionsHosted),
+      _StatItem(icon: Icons.group, label: 'Joined', value: result.sessionsJoined),
+      _StatItem(icon: Icons.queue_music, label: 'Tracks added', value: result.totalTracksAdded),
+      _StatItem(icon: Icons.thumb_up, label: 'Upvotes given', value: result.upvotesGiven),
+      _StatItem(icon: Icons.thumb_down, label: 'Downvotes given', value: result.downvotesGiven),
     ];
 
     return GridView.count(
@@ -132,11 +239,7 @@ class _StatItem {
   final IconData icon;
   final String label;
   final int value;
-  const _StatItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _StatItem({required this.icon, required this.label, required this.value});
 }
 
 class _StatCard extends StatelessWidget {
@@ -162,17 +265,13 @@ class _StatCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
             ),
-            Text(
-              item.label,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            Text(item.label, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       ),
     );
   }
 }
-
 
 class _TopMoodsCard extends StatelessWidget {
   final InsightsResult result;
@@ -181,22 +280,18 @@ class _TopMoodsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (result.topMoods.isEmpty) {
-      return _EmptyCard(
+      return const _EmptyCard(
         icon: Icons.mood,
         message: 'Tag tracks with moods to see your trends here.',
       );
     }
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Your top moods',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Your top moods', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -211,10 +306,8 @@ class _TopMoodsCard extends StatelessWidget {
                   children: [
                     MoodTagChip(tag: tag),
                     const SizedBox(width: 4),
-                    Text(
-                      '× ${entry.value}',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
+                    Text('× ${entry.value}',
+                        style: Theme.of(context).textTheme.labelSmall),
                     const SizedBox(width: 12),
                   ],
                 );
@@ -227,7 +320,6 @@ class _TopMoodsCard extends StatelessWidget {
   }
 }
 
-
 class _TopArtistsCard extends StatelessWidget {
   final InsightsResult result;
   const _TopArtistsCard({required this.result});
@@ -235,24 +327,19 @@ class _TopArtistsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (result.topArtists.isEmpty) {
-      return _EmptyCard(
+      return const _EmptyCard(
         icon: Icons.person,
         message: 'Add tracks to sessions to see your top artists.',
       );
     }
-
     final maxCount = result.topArtists.first.value;
-
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Your top artists',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text('Your top artists', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             ...result.topArtists.map((entry) {
               return Padding(
@@ -261,19 +348,13 @@ class _TopArtistsCard extends StatelessWidget {
                   children: [
                     Expanded(
                       flex: 3,
-                      child: Text(
-                        entry.key,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(entry.key,
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                     Expanded(
                       flex: 5,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8),
-                        // Simple horizontal bar to visualize relative count.
-                        // Width scales to the highest count so the leader
-                        // always fills the row.
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
@@ -285,11 +366,9 @@ class _TopArtistsCard extends StatelessWidget {
                     ),
                     SizedBox(
                       width: 32,
-                      child: Text(
-                        '${entry.value}',
-                        textAlign: TextAlign.right,
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
+                      child: Text('${entry.value}',
+                          textAlign: TextAlign.right,
+                          style: Theme.of(context).textTheme.labelMedium),
                     ),
                   ],
                 ),
@@ -301,7 +380,6 @@ class _TopArtistsCard extends StatelessWidget {
     );
   }
 }
-
 
 class _EmptyCard extends StatelessWidget {
   final IconData icon;
@@ -318,10 +396,7 @@ class _EmptyCard extends StatelessWidget {
             Icon(icon, size: 32),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(
-                message,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
             ),
           ],
         ),
