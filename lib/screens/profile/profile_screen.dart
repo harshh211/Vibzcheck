@@ -9,6 +9,7 @@ import '../../models/app_user.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../services/storage_service.dart';
+import 'settings_screen.dart';
 
 /// ProfileScreen lets the user view and update their avatar, plus sign out.
 /// Architecture: this screen owns the upload UX (picker + progress), but
@@ -145,6 +146,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               const SizedBox(height: 24),
               const Divider(),
+              const SizedBox(height: 8),
+
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text('Settings'),
+                subtitle: const Text(
+                  'Notifications and recommendation preferences',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _isUploading
+                    ? null
+                    : () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+              ),
+
               const SizedBox(height: 8),
 
               FilledButton.tonalIcon(

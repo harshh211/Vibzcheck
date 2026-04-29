@@ -1,16 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// PreferencesService persists per-user app preferences. Stored in
-/// Firestore (not on-device) so prefs follow the user across devices.
-///
-/// Keyed under /users/{uid}.preferences (a map field) rather than a
-/// subcollection — this is a small, fixed set of fields that always
-/// load together with the user profile, so a flat map keeps reads cheap.
+
 class PreferencesService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Load preferences from the user doc. Returns defaults if no prefs
-  /// exist yet (first launch after upgrade).
+ 
   Future<UserPreferences> load(String userId) async {
     final snap = await _db.collection('users').doc(userId).get();
     final data = snap.data() ?? {};
@@ -18,8 +12,7 @@ class PreferencesService {
     return UserPreferences.fromMap(raw);
   }
 
-  /// Persist preferences. Uses set with merge so we don't accidentally
-  /// overwrite other user fields (displayName, fcmToken, etc).
+
   Future<void> save(String userId, UserPreferences prefs) async {
     await _db.collection('users').doc(userId).set(
       {'preferences': prefs.toMap()},
@@ -28,12 +21,8 @@ class PreferencesService {
   }
 }
 
-/// Simple data carrier for app preferences. Add fields here as new
-/// settings are introduced — defaults flow through fromMap.
 class UserPreferences {
-  /// Whether the user wants to receive push notifications. Note: this
-  /// is the user's stated preference, separate from the OS-level
-  /// permission. The actual decision is "OS allows AND user opted in".
+
   final bool notificationsEnabled;
 
   /// Recommendation engine bias toward popularity (1-10).
