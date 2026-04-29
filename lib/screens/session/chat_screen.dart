@@ -8,18 +8,7 @@ import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 
-/// ChatScreen is the real-time message list for a session.
-///
-/// Architecture:
-///   - StreamBuilder over FirestoreService.streamMessages -> the message list
-///   - Local state for the text input + send button
-///   - Member profiles fetched once via getUsersByIds and cached in this
-///     screen's state so we don't hit Firestore for every message render.
-///
-/// Performance note: messages stream returns oldest-first. We render with
-/// reverse: true on the ListView so the newest message anchors to the
-/// bottom — this makes the keyboard slide-up behavior feel right and
-/// avoids needing a scroll controller to keep the latest in view.
+
 class ChatScreen extends StatefulWidget {
   final String sessionId;
   final List<String> memberIds;

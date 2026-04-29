@@ -15,6 +15,7 @@ import '../../widgets/mood_tag_chip.dart';
 import '../../widgets/track_tile.dart';
 import '../../widgets/vote_buttons.dart';
 import 'search_tracks_screen.dart';
+import 'chat_screen.dart';
 
 /// SessionScreen is the room the user is in. It shows:
 ///   - Session name + shareable join code
@@ -60,6 +61,20 @@ class SessionScreen extends StatelessWidget {
           appBar: AppBar(
             title: Text(session.name),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.chat_bubble_outline),
+                tooltip: 'Chat',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ChatScreen(
+                        sessionId: sessionId,
+                        memberIds: session.memberIds,
+                      ),
+                    ),
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.exit_to_app),
                 tooltip: isHost ? 'Close session' : 'Leave session',
