@@ -6,6 +6,7 @@ import '../models/app_user.dart';
 import '../models/session.dart';
 import '../models/track.dart';
 import '../models/message.dart';
+import 'spotify_service.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -167,15 +168,24 @@ class FirestoreService {
   /// auto-id, not by spotifyId — the same Spotify track CAN appear twice
   /// in a queue if added by different users (a feature, not a bug; lets
   /// people re-up a banger that already played).
-  Future<void> addTrack({
+  /// Add a track to a session's queue. Fetches audio features from Spotify
+/// and merges them into the map before writing to Firestore.
+Future<void> addTrack({
     required String sessionId,
     required Track track,
     required String addedBy,
   }) async {
-    // Build a fresh map so we don't accidentally inherit voting state
-    // from a search-result Track. toCreateMap() resets vote counts to 0.
     final data = track.toCreateMap();
     data['addedBy'] = addedBy;
+
+    // Fetch audio features and merge if available. Failures are silently
+    // ignored — the track still gets added without features.
+    final features = await SpotifyService().getAudioFeatures(track.spotifyId);
+    if (features != null) {
+      data['tempo'] = features.tempo;
+      data['energy'] = features.energy;
+      data['danceability'] = features.danceability;
+    }
 
     await _tracks(sessionId).add(data);
   }
