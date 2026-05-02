@@ -3,9 +3,6 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 
-/// Sign-up screen. Collects display name, email, password and creates both
-/// the Firebase Auth user and the Firestore user profile document via
-/// AuthProvider.signUp.
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
 
@@ -37,8 +34,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       displayName: _displayNameController.text,
     );
 
-    // On success, AuthGate will swap us to HomeScreen automatically.
-    // On failure, show the friendly error from AuthProvider.
     if (!success && mounted && auth.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.errorMessage!)),
@@ -62,6 +57,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Icon(
+                    Icons.music_note,
+                    size: 72,
+                    color: Color.fromARGB(255, 98, 13, 105),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text(
+                    'VibzCheck',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    'Create and share playlists with friends',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+
+                  const SizedBox(height: 40),
+
                   TextFormField(
                     controller: _displayNameController,
                     textCapitalization: TextCapitalization.words,
@@ -80,6 +98,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: 16),
 
                   TextFormField(
@@ -99,6 +118,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: 16),
 
                   TextFormField(
@@ -119,6 +139,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: 24),
 
                   FilledButton(
