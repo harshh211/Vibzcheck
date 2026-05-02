@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_auth/firebase_auth.dart' as fb;
 import '../../providers/auth_provider.dart';
 import 'sign_up_screen.dart';
 
-/// First screen shown when the user is signed out. Reads loading and error
-/// state from AuthProvider — no direct Firebase calls here.
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
 
@@ -18,6 +16,9 @@ class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // ✅ ADD THIS
+  bool _obscurePassword = true;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -26,7 +27,6 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _submit() async {
-    // Validate before hitting the network.
     if (!_formKey.currentState!.validate()) return;
 
     final auth = context.read<AuthProvider>();
@@ -35,8 +35,6 @@ class _SignInScreenState extends State<SignInScreen> {
       password: _passwordController.text,
     );
 
-    // If sign-in succeeded, AuthGate in main.dart will automatically
-    // swap to HomeScreen. We don't navigate manually.
     if (!success && mounted && auth.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.errorMessage!)),
@@ -46,7 +44,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Watch rebuilds this widget when AuthProvider calls notifyListeners.
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
@@ -60,22 +57,31 @@ class _SignInScreenState extends State<SignInScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.music_note, size: 72, color: Color.fromARGB(255, 98, 13, 105)),
+                  const Icon(
+                    Icons.music_note,
+                    size: 72,
+                    color: Color.fromARGB(255, 98, 13, 105),
+                  ),
                   const SizedBox(height: 16),
+
                   Text(
                     'Vibzcheck',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
+
                   const SizedBox(height: 8),
+
                   Text(
                     'Create and share playlists with your friends',
                     textAlign: TextAlign.center,
-                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                       fontWeight: FontWeight.bold,),
+                    style: Theme.of(context).textTheme.headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
                   ),
+
                   const SizedBox(height: 40),
 
+                  // EMAIL
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
@@ -93,14 +99,28 @@ class _SignInScreenState extends State<SignInScreen> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: 16),
 
+                  // PASSWORD + TOGGLE 👁
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'Password',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -109,6 +129,38 @@ class _SignInScreenState extends State<SignInScreen> {
                       return null;
                     },
                   ),
+
+                  // FORGOT PASSWORD
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () async {
+                        final email = _emailController.text.trim();
+
+                        if (email.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Enter your email first')),
+                          );
+                          return;
+                        }
+
+                        await fb.FirebaseAuth.instance
+                            .sendPasswordResetEmail(email: email);
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Password reset email sent')),
+                        );
+                      },
+                      child: const Text(
+                        'Forgot password?',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 24),
 
                   FilledButton(
@@ -120,10 +172,12 @@ class _SignInScreenState extends State<SignInScreen> {
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child:
+                                CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Sign in'),
                   ),
+
                   const SizedBox(height: 16),
 
                   TextButton(
@@ -136,7 +190,8 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                             );
                           },
-                    child: const Text('Don\'t have an account? Sign up'),
+                    child:
+                        const Text("Don't have an account? Sign up"),
                   ),
                 ],
               ),
