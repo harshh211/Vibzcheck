@@ -85,10 +85,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.currentUser;
+
+    // User just signed out — pop back immediately so AuthGate can take over.
     if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+      });
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -97,12 +103,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: StreamBuilder<AppUser?>(
         stream: _firestore.streamUser(user.uid),
         builder: (context, snapshot) {
-          // While loading, fall back to whatever Firebase Auth has so the
-          // screen doesn't flash empty for half a second.
           final appUser = snapshot.data;
-          final displayName = appUser?.displayName ??
-              user.displayName ??
-              'You';
+          final displayName = appUser?.displayName ?? user.displayName ?? 'You';
           final email = appUser?.email ?? user.email ?? '';
           final avatarUrl = appUser?.avatarUrl;
 
@@ -135,7 +137,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               const SizedBox(height: 40),
 
-              // Avatar actions: only show "Remove" if there's one to remove.
               if (avatarUrl != null && avatarUrl.isNotEmpty)
                 OutlinedButton.icon(
                   icon: const Icon(Icons.delete_outline),
