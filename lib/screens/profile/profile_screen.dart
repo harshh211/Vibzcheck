@@ -169,12 +169,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 8),
 
               FilledButton.tonalIcon(
-                icon: const Icon(Icons.logout),
+                icon: auth.isSigningOut
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.logout),
                 label: const Text('Sign out'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                onPressed: _isUploading ? null : () => auth.signOut(),
+                onPressed: (_isUploading || auth.isSigningOut)
+                    ? null
+                    : () => auth.signOut(),
               ),
             ],
           );
