@@ -229,7 +229,7 @@ class _StatGrid extends StatelessWidget {
       mainAxisSpacing: 12,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.6,
+      childAspectRatio: 1.4,
       children: stats.map((s) => _StatCard(item: s)).toList(),
     );
   }
