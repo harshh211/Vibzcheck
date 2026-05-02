@@ -60,7 +60,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(Icons.music_note, size: 64),
+                  const Icon(Icons.music_note, size: 72, color: Color.fromARGB(255, 98, 13, 105)),
                   const SizedBox(height: 16),
                   Text(
                     'Vibzcheck',
@@ -69,9 +69,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Collaborative playlists with your crew',
+                    'Create and share playlists with friends',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                       fontWeight: FontWeight.bold,),
                   ),
                   const SizedBox(height: 40),
 
