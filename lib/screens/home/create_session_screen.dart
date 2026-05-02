@@ -6,9 +6,7 @@ import '../session/session_screen.dart';
 
 /// CreateSessionScreen is a one-field form: the session name. On submit,
 /// we call SessionProvider.createSession which generates the join code
-/// server-side (well, technically client-side, but deterministically).
-/// On success we replace this screen with SessionScreen — the user
-/// shouldn't be able to back-navigate into the create form.
+/// server-side (well, technically client-side, but deterministically). On success we replace this screen with SessionScreen — the user shouldn't be able to back-navigate into the create form.
 class CreateSessionScreen extends StatefulWidget {
   final String hostId;
   const CreateSessionScreen({super.key, required this.hostId});
