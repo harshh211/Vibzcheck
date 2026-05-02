@@ -191,7 +191,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             );
                           },
                     child:
-                        const Text("Don't have an account? Sign up "),
+                        const Text("Don't have  an account? Sign up "),
                   ),
                 ],
               ),
