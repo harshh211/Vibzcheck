@@ -130,9 +130,6 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// -------------------------------------------------------------------------
-// Private widgets kept in this file since they have no standalone reuse.
-// -------------------------------------------------------------------------
 
 class _EmptySessions extends StatelessWidget {
   const _EmptySessions();
@@ -141,21 +138,35 @@ class _EmptySessions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.queue_music, size: 64),
-            const SizedBox(height: 16),
+            Icon(
+              Icons.queue_music,
+              size: 72,
+              color: Colors.grey.shade400,
+            ),
+            const SizedBox(height: 20),
             Text(
-              'No active sessions yet',
-              style: Theme.of(context).textTheme.titleMedium,
+              'No sessions yet',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 8),
             Text(
-              'Create one or join with a friend\'s code.',
-              style: Theme.of(context).textTheme.bodyMedium,
+              'Start a session or join one using a code to get the vibe going.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey,
+                  ),
               textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Tap "Create" or "Join" below',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade500,
+              ),
             ),
           ],
         ),
