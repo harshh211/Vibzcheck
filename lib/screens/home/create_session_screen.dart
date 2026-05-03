@@ -4,9 +4,6 @@ import 'package:provider/provider.dart';
 import '../../providers/session_provider.dart';
 import '../session/session_screen.dart';
 
-/// CreateSessionScreen is a one-field form: the session name. On submit,
-/// we call SessionProvider.createSession which generates the join code
-/// server-side (well, technically client-side, but deterministically). On success we replace this screen with SessionScreen — the user shouldn't be able to back-navigate into the create form.
 class CreateSessionScreen extends StatefulWidget {
   final String hostId;
   const CreateSessionScreen({super.key, required this.hostId});
@@ -30,16 +27,17 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
 
     final provider = context.read<SessionProvider>();
     final sessionId = await provider.createSession(
-      name: _nameController.text,
+      name: _nameController.text.trim(),
       hostId: widget.hostId,
     );
 
     if (!mounted) return;
 
     if (sessionId != null) {
-      // Replace, don't push — user shouldn't go "back" to the create form.
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => SessionScreen(sessionId: sessionId)),
+        MaterialPageRoute(
+          builder: (_) => SessionScreen(sessionId: sessionId),
+        ),
       );
     } else if (provider.errorMessage != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -53,7 +51,7 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
     final provider = context.watch<SessionProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New session')),
+      appBar: AppBar(title: const Text('Create Session')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -62,16 +60,28 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const Icon(
+                  Icons.queue_music,
+                  size: 64,
+                  color: Color.fromARGB(255, 98, 13, 105),
+                ),
+                const SizedBox(height: 16),
+
                 Text(
-                  'Name your session',
+                  'Start a new vibe',
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
+
                 const SizedBox(height: 8),
+
                 Text(
-                  'Your friends will see this when they join.',
+                  'Give your session a name so friends know what they are joining.',
+                  textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 32),
 
                 TextFormField(
                   controller: _nameController,
@@ -81,20 +91,24 @@ class _CreateSessionScreenState extends State<CreateSessionScreen> {
                     labelText: 'Session name',
                     hintText: 'Friday Night Vibes',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.music_note),
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
+                    final name = value?.trim() ?? '';
+
+                    if (name.isEmpty) {
                       return 'Give your session a name';
                     }
-                    if (value.trim().length < 2) {
+                    if (name.length < 2) {
                       return 'At least 2 characters';
                     }
-                    if (value.trim().length > 40) {
+                    if (name.length > 40) {
                       return 'Keep it under 40 characters';
                     }
                     return null;
                   },
                 ),
+
                 const SizedBox(height: 24),
 
                 FilledButton(
