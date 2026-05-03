@@ -117,8 +117,6 @@ class InsightsResult {
   final List<MapEntry<String, int>> topArtists;
   final List<MapEntry<String, int>> topMoods;
 
-  /// Average audio features across tracks this user added.
-  /// Null when no tracks with feature data exist yet.
   final double? avgTempo;
   final double? avgEnergy;
   final double? avgDanceability;
