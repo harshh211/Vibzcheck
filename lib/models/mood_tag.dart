@@ -14,14 +14,14 @@ class MoodTag {
   /// Master list. The order here is the order users see in the picker
   /// — high-energy first, then low-energy, then genre-flavored.
   static const List<MoodTag> all = [
-    MoodTag(label: 'hype',    icon: Icons.local_fire_department, color: Color(0xFFE74C3C)),
-    MoodTag(label: 'party',   icon: Icons.celebration,           color: Color(0xFFE91E63)),
+    MoodTag(label: 'hype',    icon: Icons.local_fire_department, color: Color.fromARGB(255, 243, 100, 84)),
+    MoodTag(label: 'party',   icon: Icons.celebration,           color: Color.fromARGB(255, 121, 17, 134)),
     MoodTag(label: 'workout', icon: Icons.fitness_center,        color: Color(0xFFFF9800)),
     MoodTag(label: 'chill',   icon: Icons.cloud,                 color: Color(0xFF3498DB)),
-    MoodTag(label: 'focus',   icon: Icons.center_focus_strong,   color: Color(0xFF1ABC9C)),
+    MoodTag(label: 'focus',   icon: Icons.center_focus_strong,   color: Color.fromARGB(255, 188, 26, 180)),
     MoodTag(label: 'sad',     icon: Icons.water_drop,            color: Color(0xFF2C3E50)),
-    MoodTag(label: 'romance', icon: Icons.favorite,              color: Color(0xFFE91E63)),
-    MoodTag(label: 'throwback', icon: Icons.history,             color: Color(0xFF9B59B6)),
+    MoodTag(label: 'romance', icon: Icons.favorite,              color: Color.fromARGB(255, 186, 92, 209)),
+    MoodTag(label: 'throwback', icon: Icons.history,             color: Color.fromARGB(255, 15, 13, 161)),
   ];
 
   /// Look up a tag by its stored label. Returns null if the label is
