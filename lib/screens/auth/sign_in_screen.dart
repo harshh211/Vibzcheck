@@ -151,7 +151,11 @@ class _SignInScreenState extends State<SignInScreen> {
                         if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text('Password reset email sent')),
+                            content: Text(
+                              'Password reset email sent. If you don\'t see it, check your spam/junk folder.',
+                            ),
+                            duration: Duration(seconds: 5),
+                          ),
                         );
                       },
                       child: const Text(
