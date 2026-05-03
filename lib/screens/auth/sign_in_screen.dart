@@ -149,6 +149,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         await fb.FirebaseAuth.instance
                             .sendPasswordResetEmail(email: email);
 
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                               content: Text('Password reset email sent')),

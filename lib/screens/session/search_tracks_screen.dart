@@ -144,7 +144,7 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 98, 13, 105).withOpacity(0.08),
+                color: const Color.fromARGB(255, 98, 13, 105).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Column(

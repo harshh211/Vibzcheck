@@ -111,7 +111,7 @@ class _InsightsHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: const Color.fromARGB(255, 98, 13, 105).withOpacity(0.08),
+      color: const Color.fromARGB(255, 98, 13, 105).withValues(alpha: 0.08),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
       ),
@@ -264,7 +264,7 @@ class _AudioBar extends StatelessWidget {
               value: fraction,
               minHeight: 8,
               color: color,
-              backgroundColor: color.withOpacity(0.15),
+              backgroundColor: color.withValues(alpha: 0.15),
             ),
           ),
         ),
@@ -367,7 +367,7 @@ class _StatCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircleAvatar(
-              backgroundColor: scheme.primary.withOpacity(0.12),
+              backgroundColor: scheme.primary.withValues(alpha: 0.12),
               child: Icon(item.icon, color: scheme.primary),
             ),
             const SizedBox(height: 8),

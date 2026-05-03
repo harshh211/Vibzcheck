@@ -14,8 +14,47 @@ import 'join_session_sheet.dart';
 import '../profile/profile_screen.dart';
 import '../insights/insights_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    // Show Spotify audio features notice once after first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.orange),
+              SizedBox(width: 8),
+              Text('Spotify Note'),
+            ],
+          ),
+          content: const Text(
+            'Audio features (tempo, energy, danceability) are unavailable '
+            'because Spotify deprecated the /audio-features endpoint for new '
+            'apps in late 2024. Recommendations still work using votes and '
+            'mood tags.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Got it'),
+            ),
+          ],
+        ),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +100,7 @@ class HomeScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color.fromARGB(255, 86, 25, 92).withOpacity(0.08),
+                color: const Color.fromARGB(255, 86, 25, 92).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
@@ -241,7 +280,7 @@ class _SessionTile extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 visualDensity: VisualDensity.compact,
                 backgroundColor:
-                    const Color.fromARGB(255, 148, 40, 158).withOpacity(0.12),
+                    const Color.fromARGB(255, 148, 40, 158).withValues(alpha: 0.12),
               ),
             ],
           ],
