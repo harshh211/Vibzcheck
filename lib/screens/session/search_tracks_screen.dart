@@ -10,9 +10,7 @@ import '../../services/spotify_service.dart';
 import '../../widgets/track_tile.dart';
 import '../../services/firestore_service.dart';
 import '../../services/messaging_service.dart';
-/// SearchTracksScreen lets a session member search Spotify and tap a
-/// result to add it to the session's queue. Search is debounced so we
-/// don't hit Spotify's rate limit while the user is still typing.
+
 class SearchTracksScreen extends StatefulWidget {
   final String sessionId;
   const SearchTracksScreen({super.key, required this.sessionId});
@@ -30,8 +28,6 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
   bool _isSearching = false;
   String? _error;
 
-  // Tracks we've already added in this search session, keyed by spotifyId.
-  // Used to grey out the "added" button so users don't double-add.
   final Set<String> _addedSpotifyIds = {};
 
   @override
@@ -42,8 +38,6 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
   }
 
   void _onQueryChanged(String value) {
-    // Cancel the previous pending search and schedule a new one.
-    // 350ms feels responsive without burning quota on every keystroke.
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
       _runSearch(value);
@@ -52,6 +46,7 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
 
   Future<void> _runSearch(String query) async {
     final trimmed = query.trim();
+
     if (trimmed.isEmpty) {
       if (!mounted) return;
       setState(() {
@@ -69,15 +64,16 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
 
     try {
       final results = await _spotify.searchTracks(trimmed);
-      // The user may have typed more characters while we waited — discard
-      // stale results if the query no longer matches.
+
       if (!mounted || _searchController.text.trim() != trimmed) return;
+
       setState(() {
         _results = results;
         _isSearching = false;
       });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         _error = 'Search failed. Check your connection and try again.';
         _isSearching = false;
@@ -99,6 +95,7 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
 
     if (success) {
       setState(() => _addedSpotifyIds.add(track.spotifyId));
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Added "${track.title}" to the queue'),
@@ -106,11 +103,6 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
         ),
       );
 
-      // Notify other members of the session. Fire-and-forget: don't make
-      // the user wait for FCM, and don't surface failures — push is
-      // best-effort. The Firestore listener has already updated everyone's
-      // queue UI in real time; the notification is just a nicety for
-      // members who have the app backgrounded.
       _notifyMembers(track, user.displayName ?? 'Someone');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -120,14 +112,12 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
   }
 
   Future<void> _notifyMembers(Track track, String adderName) async {
-    // Capture the current user's UID synchronously, BEFORE any await.
-    // This avoids touching `context` after async gaps (widget could
-    // have been disposed by then).
     final excludeUid = context.read<AuthProvider>().currentUser?.uid;
 
     try {
-      final memberIds = await FirestoreService()
-          .getSessionMemberIds(widget.sessionId);
+      final memberIds =
+          await FirestoreService().getSessionMemberIds(widget.sessionId);
+
       await MessagingService().sendToUsers(
         userIds: memberIds,
         excludeUid: excludeUid,
@@ -136,7 +126,7 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
         data: {'sessionId': widget.sessionId, 'type': 'track_added'},
       );
     } catch (_) {
-      // Silent — push is best-effort.
+      // Push notifications are best-effort.
     }
   }
 
@@ -144,19 +134,53 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add tracks'),
+        title: const Text('Add Tracks'),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 98, 13, 105).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  const Icon(
+                    Icons.library_music,
+                    size: 42,
+                    color: Color.fromARGB(255, 98, 13, 105),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Find the next vibe',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Search Spotify and add tracks to your session queue.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
             child: TextField(
               controller: _searchController,
               autofocus: true,
               onChanged: _onQueryChanged,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
-                hintText: 'Search Spotify',
+                hintText: 'Search songs, artists, or albums',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isEmpty
                     ? null
@@ -165,12 +189,16 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
                         onPressed: () {
                           _searchController.clear();
                           _onQueryChanged('');
+                          setState(() {});
                         },
                       ),
-                border: const OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
             ),
           ),
+
           Expanded(child: _buildBody()),
         ],
       ),
@@ -179,56 +207,97 @@ class _SearchTracksScreenState extends State<SearchTracksScreen> {
 
   Widget _buildBody() {
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(_error!, textAlign: TextAlign.center),
-        ),
+      return _SearchMessage(
+        icon: Icons.error_outline,
+        title: 'Could not search',
+        message: _error!,
       );
     }
+
     if (_isSearching) {
       return const Center(child: CircularProgressIndicator());
     }
+
     if (_searchController.text.trim().isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Search for a song, artist, or album.',
-            textAlign: TextAlign.center,
-          ),
-        ),
+      return const _SearchMessage(
+        icon: Icons.search,
+        title: 'Start by searching Spotify',
+        message: 'Type a song, artist, or album to find tracks.',
       );
     }
+
     if (_results.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'No matches. Try a different search.',
-            textAlign: TextAlign.center,
-          ),
-        ),
+      return const _SearchMessage(
+        icon: Icons.music_off,
+        title: 'No matches found',
+        message: 'Try searching with a different song or artist name.',
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 24),
       itemCount: _results.length,
       itemBuilder: (context, index) {
         final track = _results[index];
         final alreadyAdded = _addedSpotifyIds.contains(track.spotifyId);
-        return TrackTile(
-          track: track,
-          trailing: alreadyAdded
-              ? const Icon(Icons.check_circle, color: Colors.green)
-              : IconButton(
-                  icon: const Icon(Icons.add_circle_outline),
-                  tooltip: 'Add to queue',
-                  onPressed: () => _addTrack(track),
-                ),
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: TrackTile(
+            track: track,
+            trailing: alreadyAdded
+                ? const Icon(Icons.check_circle, color: Colors.green)
+                : IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    tooltip: 'Add to queue',
+                    onPressed: () => _addTrack(track),
+                  ),
+          ),
         );
       },
+    );
+  }
+}
+
+class _SearchMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+
+  const _SearchMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.grey.shade600,
+                  ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
