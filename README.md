@@ -239,7 +239,7 @@ Output: `build/app/outputs/flutter-apk/app-release.apk`
 ## Submission
 
 - **GitHub Repository:** https://github.com/harshh211/Vibzcheck
-- **Demo Video:** [YouTube_Link_Comming_Soon]
+- **Demo Video:** https://www.youtube.com/watch?v=aX6F7YrPffo
 - **Final Delivery:** May 3, 2026
 
 ---
