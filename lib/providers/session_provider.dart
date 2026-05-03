@@ -4,9 +4,6 @@ import '../models/session.dart';
 import '../models/track.dart';
 import '../services/firestore_service.dart';
 
-/// SessionProvider wraps FirestoreService calls with loading/error state
-/// and exposes them to screens. Screens never call FirestoreService
-/// directly — they call provider methods and watch for state changes.
 class SessionProvider extends ChangeNotifier {
   final FirestoreService _firestore = FirestoreService();
 
@@ -16,18 +13,12 @@ class SessionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  /// Stream the sessions this user belongs to. Consumers use StreamBuilder
-  /// directly — the provider just exposes the stream factory.
   Stream<List<Session>> streamMySessions(String userId) =>
       _firestore.streamMySessions(userId);
 
-  /// Stream a single session live. Used by SessionScreen to reflect
-  /// member joins/leaves in real time.
   Stream<Session> streamSession(String sessionId) =>
       _firestore.streamSession(sessionId);
 
-  /// Create a new session. Returns the new session ID on success, null
-  /// on failure (errorMessage is set).
   Future<String?> createSession({
     required String name,
     required String hostId,
@@ -45,8 +36,6 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  /// Join a session by join code. Returns the joined Session on success,
-  /// null on failure (errorMessage is set).
   Future<Session?> joinSessionByCode({
     required String code,
     required String userId,
@@ -60,7 +49,7 @@ class SessionProvider extends ChangeNotifier {
       _errorMessage = null;
       return session;
     } catch (_) {
-      // FirestoreService throws on no match; hide internals from user.
+
       _errorMessage = 'No session found for that code.';
       return null;
     } finally {
@@ -68,7 +57,7 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  /// Leave (or close, if host) a session.
+
   Future<void> leaveSession({
     required String sessionId,
     required String userId,
@@ -80,14 +69,11 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  // ---- Tracks ----------------------------------------------------------
 
-  /// Real-time stream of the queue for a session.
   Stream<List<Track>> streamTracks(String sessionId) =>
       _firestore.streamTracks(sessionId);
 
-  /// Add a track to the queue. Returns true on success, false on failure
-  /// (errorMessage is set). UI can show a snackbar on false.
+
   Future<bool> addTrack({
     required String sessionId,
     required Track track,
@@ -106,9 +92,6 @@ class SessionProvider extends ChangeNotifier {
       return false;
     }
   }
-
-  /// Remove a track from the queue. Silent failure path — UI can refresh
-  /// stream to verify; we don't surface every Firestore error to users.
   Future<void> removeTrack({
     required String sessionId,
     required String trackId,
@@ -120,9 +103,6 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-  /// Vote on a track. Direction: +1 up, -1 down, 0 clears the vote.
-  /// Failures are silent — the real-time listener will reflect the true
-  /// state on the next tick if anything went wrong.
   Future<void> voteOnTrack({
     required String sessionId,
     required String trackId,
@@ -137,7 +117,7 @@ class SessionProvider extends ChangeNotifier {
         direction: direction,
       );
     } catch (_) {
-      _errorMessage = 'Could not register vote.';
+      _errorMessage = "You'r vote did not count please try again";
       notifyListeners();
     }
   }
