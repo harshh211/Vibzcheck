@@ -51,14 +51,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return const Center(child: Text('Could not load insights.'));
-          }
-          final result = snapshot.data;
-          if (result == null) {
+            return const _InsightsMessage(
+              icon: Icons.error_outline,
+              title: 'Could not load insights',
+              message: 'Try refreshing or check your connection.',
+            );}
             return const Center(child: Text('No data yet.'));
           }
-
-          return RefreshIndicator(
+          final result = snapshot.data;
+          return RefreshIndicator( if (result == null) {
+             return const _InsightsMessage(
             onRefresh: () async => _refresh(),
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -79,6 +81,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 }
+
 class _InsightsHeader extends StatelessWidget {
   final InsightsResult result;
   const _InsightsHeader({required this.result});
@@ -257,11 +260,22 @@ class _StatGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      _StatItem(icon: Icons.star, label: 'Hosted', value: result.sessionsHosted),
-      _StatItem(icon: Icons.group, label: 'Joined', value: result.sessionsJoined),
-      _StatItem(icon: Icons.queue_music, label: 'Tracks added', value: result.totalTracksAdded),
-      _StatItem(icon: Icons.thumb_up, label: 'Upvotes given', value: result.upvotesGiven),
-      _StatItem(icon: Icons.thumb_down, label: 'Downvotes given', value: result.downvotesGiven),
+      _StatItem(
+          icon: Icons.star, label: 'Hosted', value: result.sessionsHosted),
+      _StatItem(
+          icon: Icons.group, label: 'Joined', value: result.sessionsJoined),
+      _StatItem(
+          icon: Icons.queue_music,
+          label: 'Tracks added',
+          value: result.totalTracksAdded),
+      _StatItem(
+          icon: Icons.thumb_up,
+          label: 'Upvotes given',
+          value: result.upvotesGiven),
+      _StatItem(
+          icon: Icons.thumb_down,
+          label: 'Downvotes given',
+          value: result.downvotesGiven),
     ];
 
     return GridView.count(
@@ -275,6 +289,7 @@ class _StatGrid extends StatelessWidget {
     );
   }
 }
+
 class _StatCard extends StatelessWidget {
   final _StatItem item;
   const _StatCard({required this.item});
@@ -316,11 +331,13 @@ class _StatCard extends StatelessWidget {
     );
   }
 }
+
 class _StatItem {
   final IconData icon;
   final String label;
   final int value;
-  const _StatItem({required this.icon, required this.label, required this.value});
+  const _StatItem(
+      {required this.icon, required this.label, required this.value});
 }
 
 class _StatCard extends StatelessWidget {
@@ -372,7 +389,8 @@ class _TopMoodsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your top moods', style: Theme.of(context).textTheme.titleMedium),
+            Text('Your top moods',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -420,7 +438,8 @@ class _TopArtistsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your top artists', style: Theme.of(context).textTheme.titleMedium),
+            Text('Your top artists',
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 12),
             ...result.topArtists.map((entry) {
               return Padding(
@@ -477,7 +496,8 @@ class _EmptyCard extends StatelessWidget {
             Icon(icon, size: 32),
             const SizedBox(width: 12),
             Expanded(
-              child: Text(message, style: Theme.of(context).textTheme.bodyMedium),
+              child:
+                  Text(message, style: Theme.of(context).textTheme.bodyMedium),
             ),
           ],
         ),
