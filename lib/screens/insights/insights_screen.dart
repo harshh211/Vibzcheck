@@ -64,7 +64,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 _StatGrid(result: result),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 _AudioProfileCard(result: result),
                 const SizedBox(height: 16),
                 _TopMoodsCard(result: result),
@@ -79,7 +79,48 @@ class _InsightsScreenState extends State<InsightsScreen> {
     );
   }
 }
+class _InsightsHeader extends StatelessWidget {
+  final InsightsResult result;
+  const _InsightsHeader({required this.result});
 
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: const Color.fromARGB(255, 98, 13, 105).withOpacity(0.08),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.insights,
+              size: 42,
+              color: Color.fromARGB(255, 98, 13, 105),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your music insights',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'See your sessions, votes, moods, and music habits.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 // ---- Audio profile card -------------------------------------------------
 
 class _AudioProfileCard extends StatelessWidget {
