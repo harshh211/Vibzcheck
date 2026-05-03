@@ -43,4 +43,3 @@ flutter:
   uses-material-design: true
   assets:
     - .env
-    - assets/service_account.json
