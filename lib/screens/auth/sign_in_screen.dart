@@ -16,7 +16,6 @@ class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // ✅ ADD THIS
   bool _obscurePassword = true;
 
   @override
