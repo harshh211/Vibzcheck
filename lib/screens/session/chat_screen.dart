@@ -315,7 +315,7 @@ class _MessageComposer extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Type a message...',
                   filled: true,
-                  fillColor: const Color.fromARGB(255, 68, 48, 184),
+                  fillColor: const Color.fromARGB(255, 12, 5, 56),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
