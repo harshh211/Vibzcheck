@@ -16,6 +16,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _obscurePassword = true;
+
   @override
   void dispose() {
     _displayNameController.dispose();
@@ -63,21 +65,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     color: Color.fromARGB(255, 98, 13, 105),
                   ),
                   const SizedBox(height: 16),
-
                   Text(
                     'VibzCheck',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
-
                   const SizedBox(height: 8),
-
                   Text(
                     'Create and share playlists with friends',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
-
                   const SizedBox(height: 40),
 
                   TextFormField(
@@ -123,11 +121,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
                   TextFormField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
+                    obscureText: _obscurePassword,
+                    decoration: InputDecoration(
                       labelText: 'Password',
                       helperText: 'At least 6 characters',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
