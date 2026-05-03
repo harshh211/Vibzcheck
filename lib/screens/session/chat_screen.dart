@@ -8,7 +8,6 @@ import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 
-
 class ChatScreen extends StatefulWidget {
   final String sessionId;
   final List<String> memberIds;
@@ -28,7 +27,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final _textController = TextEditingController();
   bool _isSending = false;
 
-  // Cached map of memberId -> AppUser. Loaded once on init.
   Map<String, AppUser> _memberProfiles = {};
 
   @override
@@ -40,6 +38,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _loadMemberProfiles() async {
     final users = await _firestore.getUsersByIds(widget.memberIds);
     if (!mounted) return;
+
     setState(() {
       _memberProfiles = {for (final u in users) u.uid: u};
     });
@@ -59,6 +58,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (userId == null) return;
 
     setState(() => _isSending = true);
+
     try {
       await _firestore.sendMessage(
         sessionId: widget.sessionId,
@@ -79,6 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = context.read<AuthProvider>().currentUser?.uid;
+
     if (currentUserId == null) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
@@ -94,30 +95,31 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (snapshot.hasError) {
                   return const Center(child: Text('Could not load chat.'));
                 }
+
                 final messages = snapshot.data ?? [];
+
                 if (messages.isEmpty) {
                   return const _EmptyChat();
                 }
 
-                // Reverse the list so newest is rendered at index 0; the
-                // ListView with reverse: true puts that at the bottom of
-                // the screen (which is where users expect the latest to be).
                 final reversed = messages.reversed.toList();
 
                 return ListView.builder(
                   reverse: true,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 8,
+                    vertical: 10,
                   ),
                   itemCount: reversed.length,
                   itemBuilder: (context, index) {
                     final message = reversed[index];
                     final isMe = message.senderId == currentUserId;
                     final sender = _memberProfiles[message.senderId];
+
                     return _MessageBubble(
                       message: message,
                       sender: sender,
@@ -139,7 +141,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-// -------------------------------------------------------------------------
+// ---------------- EMPTY ----------------
 
 class _EmptyChat extends StatelessWidget {
   const _EmptyChat();
@@ -152,15 +154,17 @@ class _EmptyChat extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.chat_bubble_outline, size: 56),
+            const Icon(Icons.chat_bubble_outline, size: 60),
             const SizedBox(height: 12),
             Text(
               'No messages yet',
-              style: Theme.of(context).textTheme.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
             ),
             const SizedBox(height: 4),
             Text(
-              'Be the first to say something.',
+              'Start the conversation 🎵',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
@@ -169,6 +173,8 @@ class _EmptyChat extends StatelessWidget {
     );
   }
 }
+
+// ---------------- MESSAGE ----------------
 
 class _MessageBubble extends StatelessWidget {
   final Message message;
@@ -184,16 +190,20 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final bubbleColor = isMe ? scheme.primary : scheme.surfaceContainerHighest;
+    final bubbleColor =
+        isMe ? scheme.primary : scheme.surfaceContainerHighest;
     final textColor = isMe ? scheme.onPrimary : scheme.onSurface;
+
     final senderName = sender?.displayName ?? 'Member';
     final time = message.sentAt;
     final timeStr = time != null ? DateFormat.jm().format(time) : '';
 
-    final avatar = (sender?.avatarUrl != null && sender!.avatarUrl!.isNotEmpty)
+    final avatar = (sender?.avatarUrl != null &&
+            sender!.avatarUrl!.isNotEmpty)
         ? CircleAvatar(
             radius: 14,
-            backgroundImage: CachedNetworkImageProvider(sender!.avatarUrl!),
+            backgroundImage:
+                CachedNetworkImageProvider(sender!.avatarUrl!),
           )
         : CircleAvatar(
             radius: 14,
@@ -231,18 +241,11 @@ class _MessageBubble extends StatelessWidget {
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.7,
                   ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: bubbleColor,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(14),
-                      topRight: const Radius.circular(14),
-                      bottomLeft: Radius.circular(isMe ? 14 : 2),
-                      bottomRight: Radius.circular(isMe ? 2 : 14),
-                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     message.text,
@@ -251,10 +254,14 @@ class _MessageBubble extends StatelessWidget {
                 ),
                 if (timeStr.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                    padding:
+                        const EdgeInsets.only(top: 2, left: 4, right: 4),
                     child: Text(
                       timeStr,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      style: Theme.of(context)
+                          .textTheme
+                          .labelSmall
+                          ?.copyWith(
                             color: scheme.onSurfaceVariant,
                           ),
                     ),
@@ -267,6 +274,8 @@ class _MessageBubble extends StatelessWidget {
     );
   }
 }
+
+// ---------------- INPUT ----------------
 
 class _MessageComposer extends StatelessWidget {
   final TextEditingController controller;
@@ -283,13 +292,16 @@ class _MessageComposer extends StatelessWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
         decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+          color: Theme.of(context).scaffoldBackgroundColor,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, -2),
             ),
-          ),
+          ],
         ),
         child: Row(
           children: [
@@ -300,28 +312,36 @@ class _MessageComposer extends StatelessWidget {
                 onSubmitted: (_) => onSend(),
                 minLines: 1,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  hintText: 'Type a message',
+                decoration: InputDecoration(
+                  hintText: 'Type a message...',
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(24)),
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none,
                   ),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 ),
               ),
             ),
-            const SizedBox(width: 4),
-            IconButton(
-              onPressed: isSending ? null : onSend,
-              icon: isSending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              color: Theme.of(context).colorScheme.primary,
-              tooltip: 'Send',
+            const SizedBox(width: 6),
+            CircleAvatar(
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary,
+              child: IconButton(
+                onPressed: isSending ? null : onSend,
+                icon: isSending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.send, color: Colors.white),
+              ),
             ),
           ],
         ),
